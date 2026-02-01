@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Hallo Welt: Ein Blog ist geboren."
 date: 2026-01-31
 categories: [news]

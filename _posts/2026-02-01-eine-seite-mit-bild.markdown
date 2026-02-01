@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Eine Seite mit Bild"
 date: 2026-02-01 13:30:52
 categories: [Blogging]

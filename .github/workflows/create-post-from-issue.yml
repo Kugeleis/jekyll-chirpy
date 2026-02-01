@@ -26,17 +26,30 @@ jobs:
 
           # Extract tags if specified in body with "Tags: tag1, tag2"
           if printf '%s' "$BODY" | grep -q "Tags:"; then
-            TAGS=$(printf '%s' "$BODY" | grep "Tags:" | sed 's/Tags://' | tr -d '\r')
+            TAGS=$(printf '%s' "$BODY" | grep "Tags:" | head -n 1 | sed 's/Tags://' | tr -d '\r' | sed 's/^ *//;s/ *$//')
             # Remove the Tags line from the body
             BODY=$(printf '%s' "$BODY" | grep -v "Tags:")
           else
             TAGS=""
           fi
 
+          # Extract categories if specified in body with "Categories: cat1, cat2"
+          if printf '%s' "$BODY" | grep -q "Categories:"; then
+            CATEGORIES=$(printf '%s' "$BODY" | grep "Categories:" | head -n 1 | sed 's/Categories://' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+            # Remove the Categories line from the body
+            BODY=$(printf '%s' "$BODY" | grep -v "Categories:")
+          else
+            CATEGORIES=""
+          fi
+
           # Create filename-friendly slug
-          SLUG=$(printf '%s' "$TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -dc 'a-z0-9-')
+          # Normalize German Umlaute
+          SLUG=$(printf '%s' "$TITLE" | sed 's/ä/ae/g; s/ö/oe/g; s/ü/ue/g; s/Ä/ae/g; s/Ö/oe/g; s/Ü/ue/g; s/ß/ss/g')
+          SLUG=$(printf '%s' "$SLUG" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -dc 'a-z0-9-')
+          # Remove multiple hyphens
+          SLUG=$(printf '%s' "$SLUG" | sed 's/-\{2,\}/-/g')
+
           DATE=$(date +%Y-%m-%d)
-          YEAR=$(date +%Y)
 
           # Process images
           # Find GitHub asset URLs
@@ -68,34 +81,51 @@ jobs:
             done <<< "$IMAGES"
           fi
 
-          # Create post file with front matter in yearly directory
-          mkdir -p "_posts/$YEAR"
+          # Create post file with front matter
+          mkdir -p "_posts"
 
           # Write front matter and content
+          POST_DATE=$(date +"%Y-%m-%d %H:%M:%S %z")
           {
             printf '%s\n' '---'
             printf '%s\n' 'layout: post'
             printf 'title: "%s"\n' "$TITLE"
-            printf 'date: %s\n' "$(date +"%Y-%m-%d %H:%M:%S")"
-            printf 'tags: %s\n' "$TAGS"
+            printf 'date: %s\n' "$POST_DATE"
+            if [ -n "$CATEGORIES" ]; then
+              printf 'categories: [%s]\n' "$CATEGORIES"
+            fi
+            if [ -n "$TAGS" ]; then
+              printf 'tags: [%s]\n' "$TAGS"
+            fi
             printf '%s\n\n' '---'
             printf '%s\n' "$BODY"
-          } > "_posts/$YEAR/$DATE-$SLUG.markdown"
+          } > "_posts/$DATE-$SLUG.markdown"
 
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           # Commit and push
-          git add "_posts/$YEAR/$DATE-$SLUG.markdown"
+          git add "_posts/$DATE-$SLUG.markdown"
           if [ -d "assets/img/posts/$SLUG" ]; then
             git add "assets/img/posts/$SLUG"
           fi
           git commit -m "Add new post: $TITLE"
           git push
 
-          # Set output for next step
-          POST_URL="https://alexanderle.com/${SLUG}"
+          # Get site URL and baseurl from _config.yml
+          SITE_URL=$(grep "^url:" _config.yml | sed 's/url: *//' | tr -d '"' | tr -d "'" | sed 's/ *#.*$//')
+          BASE_URL=$(grep "^baseurl:" _config.yml | sed 's/baseurl: *//' | tr -d '"' | tr -d "'" | sed 's/ *#.*$//')
+
+          # Remove trailing slash from SITE_URL if present
+          SITE_URL=${SITE_URL%/}
+          # Ensure BASE_URL starts with / if not empty, and doesn't end with /
+          if [ -n "$BASE_URL" ]; then
+            [[ "$BASE_URL" != /* ]] && BASE_URL="/$BASE_URL"
+            BASE_URL=${BASE_URL%/}
+          fi
+
+          POST_URL="${SITE_URL}${BASE_URL}/posts/${SLUG}/"
           echo "post_url=${POST_URL}" >> $GITHUB_OUTPUT
 
       - name: Comment on issue

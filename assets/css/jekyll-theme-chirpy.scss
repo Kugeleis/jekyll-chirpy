@@ -9,10 +9,14 @@
 
 /* append your custom style below */
 
-body, input, button, textarea, select {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+body, input, button, textarea, select,
+h1, h2, h3, h4, h5, h6,
+.post-desc, .label, .tag span, .date.day, #archives a,
+.post-meta, .post-content, .sidebar-link, .nav-link,
+p, li {
+  font-family: "Courier New", "Helvetica", sans-serif !important;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+code, pre, kbd, samp, .highlight, .rouge-code, .rouge-gutter {
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }

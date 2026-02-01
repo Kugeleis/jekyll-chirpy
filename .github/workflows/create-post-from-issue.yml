@@ -25,18 +25,48 @@ jobs:
           BODY="$ISSUE_BODY"
 
           # Extract tags if specified in body with "Tags: tag1, tag2"
-          if echo "$BODY" | grep -q "Tags:"; then
-            TAGS=$(echo "$BODY" | grep "Tags:" | sed 's/Tags://' | tr -d '\r')
+          if printf '%s' "$BODY" | grep -q "Tags:"; then
+            TAGS=$(printf '%s' "$BODY" | grep "Tags:" | sed 's/Tags://' | tr -d '\r')
             # Remove the Tags line from the body
-            BODY=$(echo "$BODY" | grep -v "Tags:")
+            BODY=$(printf '%s' "$BODY" | grep -v "Tags:")
           else
             TAGS=""
           fi
 
           # Create filename-friendly slug
-          SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -dc 'a-z0-9-')
+          SLUG=$(printf '%s' "$TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -dc 'a-z0-9-')
           DATE=$(date +%Y-%m-%d)
           YEAR=$(date +%Y)
+
+          # Process images
+          # Find GitHub asset URLs
+          IMAGES=$(printf '%s' "$BODY" | grep -oE 'https://github.com/[^/]+/[^/]+/assets/[0-9a-fA-F-]+(/[0-9a-fA-F-]+)?|https://github.com/user-attachments/assets/[0-9a-fA-F-]+' | sort -u)
+
+          if [ -n "$IMAGES" ]; then
+            mkdir -p "assets/img/posts/$SLUG"
+            i=1
+            while read -r img_url; do
+              if [ -n "$img_url" ]; then
+                echo "Processing image: $img_url"
+                img_ext="webp"
+                img_name="image-$i.$img_ext"
+                img_path="assets/img/posts/$SLUG/$img_name"
+
+                # Download and convert image
+                curl -L "$img_url" -o "temp_img"
+                if [ -s "temp_img" ]; then
+                  if convert "temp_img" -resize 1200\> -quality 80 "$img_path"; then
+                    # Update BODY with the new relative path
+                    # Using a different delimiter for sed to avoid issues with / in URLs
+                    # Using Liquid's relative_url for better compatibility with baseurl
+                    BODY=$(printf '%s' "$BODY" | sed "s#$img_url#{{ '/$img_path' | relative_url }}#g")
+                    i=$((i+1))
+                  fi
+                  rm "temp_img"
+                fi
+              fi
+            done <<< "$IMAGES"
+          fi
 
           # Create post file with front matter in yearly directory
           mkdir -p "_posts/$YEAR"
@@ -58,6 +88,9 @@ jobs:
 
           # Commit and push
           git add "_posts/$YEAR/$DATE-$SLUG.markdown"
+          if [ -d "assets/img/posts/$SLUG" ]; then
+            git add "assets/img/posts/$SLUG"
+          fi
           git commit -m "Add new post: $TITLE"
           git push
 

@@ -27,13 +27,15 @@ import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
 import { toMarkdown } from 'mdast-util-to-markdown';
 
-const eventJson = process.argv[2];
-if (!eventJson) {
-  console.error('Usage: node index.js "<github_event_json>"');
+const eventFile = process.argv[2] || 'event.json';
+let event;
+try {
+  const eventJson = fs.readFileSync(eventFile, 'utf8');
+  event = JSON.parse(eventJson);
+} catch (err) {
+  console.error('Error reading event file:', err.message);
   process.exit(1);
 }
-
-const event = JSON.parse(eventJson);
 
 const githubToken = process.env.GITHUB_TOKEN;
 const targetOwner = process.env.TARGET_OWNER || 'user-attachments';

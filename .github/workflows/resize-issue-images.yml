@@ -31,6 +31,7 @@ jobs:
 
       - name: Run resize script
         working-directory: .github/actions/resize-image
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_OWNER: user-attachments
@@ -38,4 +39,5 @@ jobs:
           MAX_WIDTH: "1200"
           QUALITY: "80"
         run: |
-          node index.js "${{ toJson(github.event) }}"
+          echo '${{ toJson(github.event) }}' > event.json
+          node index.js event.json || echo "No images to process or image processing failed, continuing..."

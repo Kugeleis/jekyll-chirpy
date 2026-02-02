@@ -7,8 +7,8 @@ on:
     types: [created, edited]
 
 permissions:
-  contents: write     # commit files to repository (assets)
-  issues: write       # edit issues/comments
+  contents: write # commit files to repository (assets)
+  issues: write # edit issues/comments
 
 jobs:
   resize:
@@ -23,11 +23,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         working-directory: .github/actions/resize-image
-        run: npm ci
+        run: npm install
 
       - name: Run resize script
         working-directory: .github/actions/resize-image

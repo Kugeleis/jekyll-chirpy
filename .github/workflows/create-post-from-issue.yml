@@ -22,12 +22,19 @@ jobs:
         run: bash tools/create-post.sh
 
       - name: Install dependencies for resize action
-        run: npm install
         working-directory: .github/actions/resize-image
+        run: npm install
 
       - name: Resize issue images
-        run: node index.js "${{ toJson(github.event) }}"
         working-directory: .github/actions/resize-image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_OWNER: user-attachments
+          TARGET_REPO: assets
+          MAX_WIDTH: "1200"
+          QUALITY: "80"
+        run: |
+          node index.js "${{ toJson(github.event) }}"
 
       - name: Comment on issue
         uses: actions/github-script@v6

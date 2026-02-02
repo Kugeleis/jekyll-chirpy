@@ -16,7 +16,6 @@
  * - MAX_WIDTH (default 1200)
  * - QUALITY (default 80)
  */
-
 import fs from 'fs';
 import path from 'path';
 import { Octokit } from '@octokit/rest';
@@ -64,11 +63,10 @@ function getTextAndTarget(event) {
   // patchCallback(newText): function that applies the update via octokit
   const repo_full = event.repository?.full_name || process.env.GITHUB_REPOSITORY;
   if (!repo_full) throw new Error('Repository context not found');
-
   const [owner, repo] = repo_full.split('/');
 
   // Issue body (opened/edited)
-  if (event.issue && event.action && (event.action === 'opened' || event.action === 'edited')) {
+  if (event.issue && event.action && (event.action === 'opened' || event.action === 'edited' || event.action === 'labeled')) {
     const issue_number = event.issue.number;
     const original = event.issue.body || '';
     return {
@@ -123,17 +121,60 @@ function isAllowedUrl(u) {
 }
 
 async function downloadBuffer(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'github-action-resize-images' }
-  });
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-  return await res.buffer();
+  // For GitHub user-attachments, try different URL patterns
+  let urlsToTry = [url];
+
+  if (url.includes('github.com/user-attachments/assets/')) {
+    const assetId = url.match(/assets\/([a-f0-9-]+)/)?.[1];
+    if (assetId) {
+      // Try different possible URL patterns for GitHub assets
+      urlsToTry = [
+        // Try the original URL first
+        url,
+        // Try adding ?raw=true parameter
+        `${url}?raw=true`,
+        // Try the private raw URL pattern
+        `https://private-user-images.githubusercontent.com/${assetId}`,
+        // Try user-images pattern
+        `https://user-images.githubusercontent.com/${assetId}`,
+      ];
+    }
+  }
+
+  for (const tryUrl of urlsToTry) {
+    try {
+      console.log(`Trying URL: ${tryUrl}`);
+      const res = await fetch(tryUrl, {
+        headers: {
+          'User-Agent': 'github-action-resize-images',
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': '*/*'
+        },
+        redirect: 'follow'
+      });
+
+      if (res.ok) {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.startsWith('image/')) {
+          console.log(`Successfully fetched image from: ${tryUrl}`);
+          return await res.buffer();
+        } else {
+          console.log(`URL ${tryUrl} returned non-image content: ${contentType}`);
+        }
+      } else {
+        console.log(`Failed to fetch from ${tryUrl}: ${res.status} ${res.statusText}`);
+      }
+    } catch (error) {
+      console.log(`Error fetching from ${tryUrl}:`, error.message);
+    }
+  }
+
+  throw new Error(`Failed to fetch image from any URL for: ${url}`);
 }
 
 // Commit file to target repo using createOrUpdateFileContents
 async function commitBufferToTargetRepo(filePath, buffer, message) {
   const base64 = buffer.toString('base64');
-
   // check if file exists to get sha
   let sha = undefined;
   try {
@@ -144,7 +185,6 @@ async function commitBufferToTargetRepo(filePath, buffer, message) {
   } catch (err) {
     // not found -> will create
   }
-
   await octokit.repos.createOrUpdateFileContents({
     owner: targetOwner,
     repo: targetRepo,
@@ -155,7 +195,6 @@ async function commitBufferToTargetRepo(filePath, buffer, message) {
     committer: { name: 'github-actions', email: 'actions@github.com' },
     author: { name: 'github-actions', email: 'actions@github.com' }
   });
-
   // raw file URL uses main branch by default; if target repo default branch isn't main, consider using the branch field
   return `https://raw.githubusercontent.com/${targetOwner}/${targetRepo}/main/${filePath}`;
 }
@@ -193,13 +232,13 @@ function sanitizeFilename(name) {
         // Use sharp to resize and convert to webp
         const img = sharp(buf);
         const metadata = await img.metadata();
-
         let pipeline = img;
+
         if (metadata.width && metadata.width > maxWidth) {
           pipeline = pipeline.resize({ width: maxWidth });
         }
-        pipeline = pipeline.webp({ quality });
 
+        pipeline = pipeline.webp({ quality });
         const outBuf = await pipeline.toBuffer();
 
         // Prepare path: assets/<issue-number>/<timestamp>-<origname>.webp
@@ -209,10 +248,9 @@ function sanitizeFilename(name) {
         const filename = `${Date.now()}-${safe}.webp`;
         const filePath = `assets/${issueNumber}/${filename}`;
         const commitMsg = `Add resized image for issue #${issueNumber}`;
-
         const rawUrl = await commitBufferToTargetRepo(filePath, outBuf, commitMsg);
-        replacements[url] = rawUrl;
 
+        replacements[url] = rawUrl;
         console.log('Committed to', rawUrl);
       } catch (err) {
         console.error('Error processing', url, err.message || err);
@@ -233,7 +271,6 @@ function sanitizeFilename(name) {
 
     // Serialize back to markdown
     const newText = toMarkdown(tree);
-
     if (newText !== ctx.text) {
       await ctx.patchCallback(newText);
       console.log('Updated original with resized image URLs.');

@@ -1,0 +1,15 @@
+- name: "Tokyo Tower"
+  latitude: 35.6586
+  longitude: 139.7454
+- name: "Senso-ji Temple"
+  latitude: 35.7148
+  longitude: 139.7967
+- name: "Meiji Jingu Shrine"
+  latitude: 35.6764
+  longitude: 139.6993
+- name: "Imperial Palace"
+  latitude: 35.6852
+  longitude: 139.7528
+- name: "Shibuya Crossing"
+  latitude: 35.6595
+  longitude: 139.7005

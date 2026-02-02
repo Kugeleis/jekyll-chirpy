@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Hallo Arbeitswoche"
 date: 2026-02-02 06:58:34 +0000
 tags: [Kultur, Musik, Reisen]

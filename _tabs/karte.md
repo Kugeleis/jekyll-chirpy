@@ -10,7 +10,10 @@ order: 5
 <div id="map" style="height: 600px; z-index: 1;"></div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
+  (function() {
+    var mapEl = document.getElementById('map');
+    if (!mapEl || mapEl._leaflet_id) return;
+
     var points = [
       {% for point in site.data.geopoints %}
       {
@@ -28,11 +31,9 @@ order: 5
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    var markers = [];
     points.forEach(function(point) {
       var marker = L.marker([point.latitude, point.longitude]).addTo(map);
       marker.bindPopup(point.name);
-      markers.push(marker);
     });
 
     if (points.length >= 2) {
@@ -43,7 +44,7 @@ order: 5
     } else if (points.length === 1) {
       map.setView([points[0].latitude, points[0].longitude], 10);
     } else {
-      map.setView([36.2048, 138.2529], 5); // Default Japan
+      map.setView([36.2048, 138.2529], 5); /* Default Japan */
     }
-  });
+  })();
 </script>

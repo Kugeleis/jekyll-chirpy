@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Werden Bilder kleiner?"
 date: 2026-02-01 20:57:20
 tags: 

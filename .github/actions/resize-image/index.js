@@ -174,29 +174,60 @@ async function downloadBuffer(url) {
 
 // Commit file to target repo using createOrUpdateFileContents
 async function commitBufferToTargetRepo(filePath, buffer, message) {
-  const base64 = buffer.toString('base64');
-  // check if file exists to get sha
-  let sha = undefined;
   try {
-    const { data } = await octokit.repos.getContent({
-      owner: targetOwner, repo: targetRepo, path: filePath
+    console.log(`Attempting to commit to: ${targetOwner}/${targetRepo}/${filePath}`);
+
+    const base64 = buffer.toString('base64');
+
+    // Check if target repository exists and is accessible
+    try {
+      await octokit.repos.get({
+        owner: targetOwner,
+        repo: targetRepo
+      });
+      console.log(`Target repository ${targetOwner}/${targetRepo} is accessible`);
+    } catch (repoError) {
+      console.error(`Cannot access target repository ${targetOwner}/${targetRepo}:`, repoError.message);
+      throw new Error(`Target repository ${targetOwner}/${targetRepo} not found or not accessible`);
+    }
+
+    // check if file exists to get sha
+    let sha = undefined;
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner: targetOwner,
+        repo: targetRepo,
+        path: filePath
+      });
+      sha = data.sha;
+      console.log(`File ${filePath} already exists, will update`);
+    } catch (err) {
+      console.log(`File ${filePath} does not exist, will create new file`);
+      // not found -> will create
+    }
+
+    console.log(`Creating/updating file: ${filePath}`);
+    await octokit.repos.createOrUpdateFileContents({
+      owner: targetOwner,
+      repo: targetRepo,
+      path: filePath,
+      message,
+      content: base64,
+      sha,
+      committer: { name: 'github-actions', email: 'actions@github.com' },
+      author: { name: 'github-actions', email: 'actions@github.com' }
     });
-    sha = data.sha;
-  } catch (err) {
-    // not found -> will create
+
+    // raw file URL uses main branch by default; if target repo default branch isn't main, consider using the branch field
+    const rawUrl = `https://raw.githubusercontent.com/${targetOwner}/${targetRepo}/main/${filePath}`;
+    console.log(`File committed successfully, raw URL: ${rawUrl}`);
+    return rawUrl;
+
+  } catch (error) {
+    console.error(`Error in commitBufferToTargetRepo:`, error.message);
+    console.error(`Full error:`, error);
+    throw error;
   }
-  await octokit.repos.createOrUpdateFileContents({
-    owner: targetOwner,
-    repo: targetRepo,
-    path: filePath,
-    message,
-    content: base64,
-    sha,
-    committer: { name: 'github-actions', email: 'actions@github.com' },
-    author: { name: 'github-actions', email: 'actions@github.com' }
-  });
-  // raw file URL uses main branch by default; if target repo default branch isn't main, consider using the branch field
-  return `https://raw.githubusercontent.com/${targetOwner}/${targetRepo}/main/${filePath}`;
 }
 
 function sanitizeFilename(name) {
@@ -228,18 +259,23 @@ function sanitizeFilename(name) {
       try {
         console.log('Processing:', url);
         const buf = await downloadBuffer(url);
+        console.log(`Downloaded image buffer of size: ${buf.length} bytes`);
 
         // Use sharp to resize and convert to webp
         const img = sharp(buf);
         const metadata = await img.metadata();
+        console.log(`Image metadata:`, { width: metadata.width, height: metadata.height, format: metadata.format });
+
         let pipeline = img;
 
         if (metadata.width && metadata.width > maxWidth) {
+          console.log(`Resizing image from ${metadata.width}px to ${maxWidth}px width`);
           pipeline = pipeline.resize({ width: maxWidth });
         }
 
         pipeline = pipeline.webp({ quality });
         const outBuf = await pipeline.toBuffer();
+        console.log(`Processed image buffer size: ${outBuf.length} bytes`);
 
         // Prepare path: assets/<issue-number>/<timestamp>-<origname>.webp
         const issueNumber = ctx.issue_number || (event.issue && event.issue.number) || (event.comment && event.issue && event.issue.number) || 'unknown';
@@ -248,12 +284,17 @@ function sanitizeFilename(name) {
         const filename = `${Date.now()}-${safe}.webp`;
         const filePath = `assets/${issueNumber}/${filename}`;
         const commitMsg = `Add resized image for issue #${issueNumber}`;
+
+        console.log(`Prepared file path: ${filePath}`);
+
         const rawUrl = await commitBufferToTargetRepo(filePath, outBuf, commitMsg);
 
         replacements[url] = rawUrl;
-        console.log('Committed to', rawUrl);
+        console.log('Successfully committed to', rawUrl);
       } catch (err) {
-        console.error('Error processing', url, err.message || err);
+        console.error('Error processing', url);
+        console.error('Error details:', err.message);
+        console.error('Full error:', err);
       }
     }
 

@@ -24,20 +24,20 @@ jobs:
           TITLE="$ISSUE_TITLE"
           BODY="$ISSUE_BODY"
 
-          # Extract tags if specified in body with "Tags: tag1, tag2"
-          if printf '%s' "$BODY" | grep -q "Tags:"; then
-            TAGS=$(printf '%s' "$BODY" | grep "Tags:" | head -n 1 | sed 's/Tags://' | tr -d '\r' | sed 's/^ *//;s/ *$//')
-            # Remove the Tags line from the body
-            BODY=$(printf '%s' "$BODY" | grep -v "Tags:")
+          # Extract tags
+          TAG_LINE=$(printf '%s' "$BODY" | grep -iE '^(tag|tags):' | head -n 1)
+          if [ -n "$TAG_LINE" ]; then
+            TAGS=$(printf '%s' "$TAG_LINE" | sed -E 's/^(tag|tags)://i' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+            BODY=$(printf '%s' "$BODY" | grep -vFx "$TAG_LINE")
           else
             TAGS=""
           fi
 
-          # Extract categories if specified in body with "Categories: cat1, cat2"
-          if printf '%s' "$BODY" | grep -q "Categories:"; then
-            CATEGORIES=$(printf '%s' "$BODY" | grep "Categories:" | head -n 1 | sed 's/Categories://' | tr -d '\r' | sed 's/^ *//;s/ *$//')
-            # Remove the Categories line from the body
-            BODY=$(printf '%s' "$BODY" | grep -v "Categories:")
+          # Extract categories
+          CAT_LINE=$(printf '%s' "$BODY" | grep -iE '^(category|categories):' | head -n 1)
+          if [ -n "$CAT_LINE" ]; then
+            CATEGORIES=$(printf '%s' "$CAT_LINE" | sed -E 's/^(category|categories)://i' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+            BODY=$(printf '%s' "$BODY" | grep -vFx "$CAT_LINE")
           else
             CATEGORIES=""
           fi
@@ -88,7 +88,6 @@ jobs:
           POST_DATE=$(date +"%Y-%m-%d %H:%M:%S %z")
           {
             printf '%s\n' '---'
-            printf '%s\n' 'layout: post'
             printf 'title: "%s"\n' "$TITLE"
             printf 'date: %s\n' "$POST_DATE"
             if [ -n "$CATEGORIES" ]; then
@@ -99,14 +98,14 @@ jobs:
             fi
             printf '%s\n\n' '---'
             printf '%s\n' "$BODY"
-          } > "_posts/$DATE-$SLUG.markdown"
+          } > "_posts/$DATE-$SLUG.md"
 
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           # Commit and push
-          git add "_posts/$DATE-$SLUG.markdown"
+          git add "_posts/$DATE-$SLUG.md"
           if [ -d "assets/img/posts/$SLUG" ]; then
             git add "assets/img/posts/$SLUG"
           fi

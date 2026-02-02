@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "An B von Britta Flug"
 date: 2026-02-01 22:37:35 +0000
 ---

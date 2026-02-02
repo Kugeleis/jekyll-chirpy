@@ -34,7 +34,8 @@ jobs:
           MAX_WIDTH: "1200"
           QUALITY: "80"
         run: |
-          node index.js "${{ toJson(github.event) }}"
+          echo "${{ toJson(github.event) }}" > event.json
+          node index.js event.json
 
       - name: Comment on issue
         uses: actions/github-script@v6

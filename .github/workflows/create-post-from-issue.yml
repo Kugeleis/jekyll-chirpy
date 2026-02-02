@@ -52,35 +52,16 @@ jobs:
           DATE=$(date +%Y-%m-%d)
 
           # Process images
-          # Find GitHub asset URLs
-          IMAGES=$(printf '%s' "$BODY" | grep -oE 'https://github.com/[^/]+/[^/]+/assets/[0-9a-fA-F-]+(/[0-9a-fA-F-]+)?|https://github.com/user-attachments/assets/[0-9a-fA-F-]+' | sort -u)
-
-          if [ -n "$IMAGES" ]; then
-            mkdir -p "assets/img/posts/$SLUG"
-            i=1
-            while read -r img_url; do
-              if [ -n "$img_url" ]; then
-                echo "Processing image: $img_url"
-                img_ext="webp"
-                img_name="image-$i.$img_ext"
-                img_path="assets/img/posts/$SLUG/$img_name"
-
-                # Download and convert image
-                curl -L "$img_url" -o "temp_img"
-                if [ -s "temp_img" ]; then
-                  if convert "temp_img" -resize 1200\> -quality 80 "$img_path"; then
-                    # Update BODY with the new relative path
-                    # Using a different delimiter for sed to avoid issues with / in URLs
-                    # Using Liquid's relative_url for better compatibility with baseurl
-                    BODY=$(printf '%s' "$BODY" | sed "s#$img_url#{{ '/$img_path' | relative_url }}#g")
-                    i=$((i+1))
-                  fi
-                  rm "temp_img"
-                fi
-              fi
-            done <<< "$IMAGES"
-          fi
-
+          - name: Resize issue images
+            uses: ./.github/actions/resize-image
+            with:
+              issue_body: "$BODY"
+              issue_title: "$TITLE"
+              issue_slug: "$SLUG"
+              issue_date: "$DATE"
+              images: "$IMAGES"
+              
+          # Continue with further processing
           # Create post file with front matter
           mkdir -p "_posts"
 

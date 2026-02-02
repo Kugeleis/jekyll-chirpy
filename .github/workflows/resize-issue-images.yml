@@ -1,0 +1,41 @@
+name: Resize issue images and store assets
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: write     # commit files to repository (assets)
+  issues: write       # edit issues/comments
+
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo (needed to create commits)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: .github/actions/resize-image
+        run: npm ci
+
+      - name: Run resize script
+        working-directory: .github/actions/resize-image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_OWNER: user-attachments
+          TARGET_REPO: assets
+          MAX_WIDTH: "1200"
+          QUALITY: "80"
+        run: |
+          node index.js "${{ toJson(github.event) }}"

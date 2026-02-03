@@ -1,15 +1,12 @@
-- name: "Tokyo Tower"
-  latitude: 35.6586
-  longitude: 139.7454
-- name: "Senso-ji Temple"
-  latitude: 35.7148
-  longitude: 139.7967
-- name: "Meiji Jingu Shrine"
-  latitude: 35.6764
-  longitude: 139.6993
-- name: "Imperial Palace"
-  latitude: 35.6852
-  longitude: 139.7528
-- name: "Shibuya Crossing"
-  latitude: 35.6595
-  longitude: 139.7005
+- name: Prague
+  latitude: 50.0755
+  longitude: 14.4378
+- name: Taipei
+  latitude: 25.0330
+  longitude: 121.5654
+- name: Fukuoka Airport
+  latitude: 33.5859
+  longitude: 130.4511
+- name: Fukuoka
+  latitude: 33.5904
+  longitude: 130.4017

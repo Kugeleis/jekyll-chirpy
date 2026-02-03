@@ -47,7 +47,7 @@
          data-lon="{{ last_point.longitude }}"
          data-name="{{ last_point.name }}"
          class="w-100 px-4 mb-3"
-         style="font-size: 0.85rem; color: var(--sidebar-muted-color); line-height: 1.2;">
+         style="font-size: 1rem; color: var(--sidebar-muted-color); line-height: 1.2;">
     </div>
 
     <script>
@@ -67,7 +67,7 @@
         var sixHours = 6 * 60 * 60 * 1000;
 
         function updateDisplay(temp) {
-          display.innerHTML = '<i class="fas fa-thermometer-half fa-fw me-1"></i>Aktuelle Temperatur in ' + name + ': ' + temp + '°C';
+          display.innerHTML = '<i class="fas fa-thermometer-half fa-fw me-1"></i>Wetter in ' + name + ': ' + temp + '°C';
         }
 
         function fetchTemperature() {

@@ -1,0 +1,63 @@
+name: process-new-location
+on:
+  issues:
+    types: [labeled]
+jobs:
+  add-location:
+    if: github.event.label.name == 'new-location'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: pip install PyYAML
+      - name: Add new location
+        id: add-location
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          GITHUB_ACTIONS: "true"
+        run: python3 tools/add-location.py
+      - name: Comment on success
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.issue;
+            await github.rest.issues.createComment({
+              issue_number: issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Location added successfully! The issue is now closed.'
+            });
+            await github.rest.issues.update({
+              issue_number: issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            });
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const issue = context.issue;
+            let errorMsg = 'An unknown error occurred.';
+            if (fs.existsSync('error.txt')) {
+              errorMsg = fs.readFileSync('error.txt', 'utf8');
+            }
+            await github.rest.issues.createComment({
+              issue_number: issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ Error: ${errorMsg}`
+            });

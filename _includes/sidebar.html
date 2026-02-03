@@ -46,9 +46,8 @@
          data-lat="{{ last_point.latitude }}" 
          data-lon="{{ last_point.longitude }}" 
          data-name="{{ last_point.name }}"
-         data-format="{{ site.data.locales[include.lang].weather.current | default: 'Current temperature in :location: :temp°C' }}"
-         class="w-100 px-4 mb-3" 
-         style="font-size: 1rem; color: var(--sidebar-muted-color); line-height: 1.2;">
+         class="w-100 px-4 mb-3 text-end"
+         style="font-size: 1.5rem; color: var(--sidebar-muted-color); line-height: 1.2;">
     </div>
 
     <script>
@@ -63,11 +62,15 @@
         var lat = display.getAttribute('data-lat');
         var lon = display.getAttribute('data-lon');
         var name = display.getAttribute('data-name');
-        var format = display.getAttribute('data-format');
         var cacheKey = 'last_temp_' + lat + '_' + lon;
         var cacheCodeKey = cacheKey + '_code';
+        var cacheOffsetKey = cacheKey + '_offset';
         var cacheTimeKey = cacheKey + '_time';
         var sixHours = 6 * 60 * 60 * 1000;
+
+        var currentTemp = null;
+        var currentCode = null;
+        var currentOffset = 0;
 
         function getWeatherIcon(code) {
           /* WMO Weather interpretation codes (WW) */
@@ -83,24 +86,40 @@
           return 'fa-thermometer-half';
         }
 
-        function updateDisplay(temp, code) {
-          var icon = getWeatherIcon(parseInt(code));
-          var text = format.replace(':location:', name).replace(':temp', temp);
-          display.innerHTML = '<i class="fas ' + icon + ' fa-fw me-1"></i>' + text;
+        function updateDisplay() {
+          if (currentTemp === null) return;
+
+          var icon = getWeatherIcon(parseInt(currentCode));
+
+          /* Calculate local time */
+          var now = new Date();
+          var localTime = new Date(now.getTime() + (currentOffset * 1000));
+          var hours = localTime.getUTCHours().toString().padStart(2, '0');
+          var minutes = localTime.getUTCMinutes().toString().padStart(2, '0');
+          var timeStr = hours + ':' + minutes;
+
+          display.innerHTML =
+            '<div class="mb-2"><i class="fas ' + icon + ' fa-2x"></i></div>' +
+            '<div class="fw-bold">' + name + '</div>' +
+            '<div>' + currentTemp + '°C | ' + timeStr + '</div>';
         }
 
         function fetchTemperature() {
-          var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true';
+          var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&timezone=auto';
           fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
               if (data.current_weather && data.current_weather.temperature !== undefined) {
-                var temp = data.current_weather.temperature;
-                var code = data.current_weather.weathercode;
-                updateDisplay(temp, code);
+                currentTemp = data.current_weather.temperature;
+                currentCode = data.current_weather.weathercode;
+                currentOffset = data.utc_offset_seconds || 0;
+
+                updateDisplay();
+
                 try {
-                  localStorage.setItem(cacheKey, temp);
-                  localStorage.setItem(cacheCodeKey, code);
+                  localStorage.setItem(cacheKey, currentTemp);
+                  localStorage.setItem(cacheCodeKey, currentCode);
+                  localStorage.setItem(cacheOffsetKey, currentOffset);
                   localStorage.setItem(cacheTimeKey, Date.now());
                 } catch (e) {
                   /* localStorage might be full or disabled */
@@ -112,25 +131,27 @@
             });
         }
 
-        var cachedTemp = null;
-        var cachedCode = null;
-        var cachedTime = null;
         try {
-          cachedTemp = localStorage.getItem(cacheKey);
-          cachedCode = localStorage.getItem(cacheCodeKey);
-          cachedTime = localStorage.getItem(cacheTimeKey);
-        } catch (e) {
-          /* localStorage disabled */
-        }
+          var cachedTemp = localStorage.getItem(cacheKey);
+          var cachedCode = localStorage.getItem(cacheCodeKey);
+          var cachedOffset = localStorage.getItem(cacheOffsetKey);
+          var cachedTime = localStorage.getItem(cacheTimeKey);
 
-        var now = Date.now();
-        if (cachedTemp && cachedTime && (now - cachedTime < sixHours)) {
-          updateDisplay(cachedTemp, cachedCode || 0);
-        } else {
+          var now = Date.now();
+          if (cachedTemp && cachedTime && (now - cachedTime < sixHours)) {
+            currentTemp = cachedTemp;
+            currentCode = cachedCode || 0;
+            currentOffset = parseInt(cachedOffset || 0);
+            updateDisplay();
+          } else {
+            fetchTemperature();
+          }
+        } catch (e) {
           fetchTemperature();
         }
 
         setInterval(fetchTemperature, sixHours);
+        setInterval(updateDisplay, 60000); /* Update clock every minute */
       })();
     </script>
   {% endif %}

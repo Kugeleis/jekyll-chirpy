@@ -30,9 +30,9 @@
         <li class="nav-item{% if tab.url == page.url %}{{ " active" }}{% endif %}">
           <a href="{{ tab.url | relative_url }}" class="nav-link">
             <i class="fa-fw {{ tab.icon }}"></i>
-            {% capture tab_name %}{{ tab.url | split: '/' }}{% endcapture %}
+            {% capture tab_name %}{{ tab.url | split: '/' | last }}{% endcapture %}
 
-            <span>{{ site.data.locales[include.lang].tabs.[tab_name] | default: tab.title | upcase }}</span>
+            <span>{{ site.data.locales[include.lang].tabs[tab_name] | default: tab.title | upcase }}</span>
           </a>
         </li>
         <!-- .nav-item -->
@@ -42,12 +42,13 @@
 
   {% assign last_point = site.data.geopoints | last %}
   {% if last_point %}
-    <div id="temperature-display"
-         data-lat="{{ last_point.latitude }}"
-         data-lon="{{ last_point.longitude }}"
+    <div id="temperature-display" 
+         data-lat="{{ last_point.latitude }}" 
+         data-lon="{{ last_point.longitude }}" 
          data-name="{{ last_point.name }}"
-         class="w-100 px-4 mb-3"
-         style="font-size: 0.85rem; color: var(--sidebar-muted-color); line-height: 1.2;">
+         data-format="{{ site.data.locales[include.lang].weather.current | default: 'Current temperature in :location: :temp°C' }}"
+         class="w-100 px-4 mb-3" 
+         style="font-size: 1rem; color: var(--sidebar-muted-color); line-height: 1.2;">
     </div>
 
     <script>
@@ -62,12 +63,30 @@
         var lat = display.getAttribute('data-lat');
         var lon = display.getAttribute('data-lon');
         var name = display.getAttribute('data-name');
+        var format = display.getAttribute('data-format');
         var cacheKey = 'last_temp_' + lat + '_' + lon;
+        var cacheCodeKey = cacheKey + '_code';
         var cacheTimeKey = cacheKey + '_time';
         var sixHours = 6 * 60 * 60 * 1000;
 
-        function updateDisplay(temp) {
-          display.innerHTML = '<i class="fas fa-thermometer-half fa-fw me-1"></i>Aktuelle Temperatur in ' + name + ': ' + temp + '°C';
+        function getWeatherIcon(code) {
+          /* WMO Weather interpretation codes (WW) */
+          if (code === 0) return 'fa-sun';
+          if (code >= 1 && code <= 3) return 'fa-cloud-sun';
+          if (code === 45 || code === 48) return 'fa-smog';
+          if (code >= 51 && code <= 55) return 'fa-cloud-rain';
+          if (code >= 61 && code <= 65) return 'fa-cloud-showers-heavy';
+          if (code >= 71 && code <= 77) return 'fa-snowflake';
+          if (code >= 80 && code <= 82) return 'fa-cloud-rain';
+          if (code >= 85 && code <= 86) return 'fa-snowflake';
+          if (code >= 95) return 'fa-bolt';
+          return 'fa-thermometer-half';
+        }
+
+        function updateDisplay(temp, code) {
+          var icon = getWeatherIcon(parseInt(code));
+          var text = format.replace(':location:', name).replace(':temp', temp);
+          display.innerHTML = '<i class="fas ' + icon + ' fa-fw me-1"></i>' + text;
         }
 
         function fetchTemperature() {
@@ -77,9 +96,11 @@
             .then(function(data) {
               if (data.current_weather && data.current_weather.temperature !== undefined) {
                 var temp = data.current_weather.temperature;
-                updateDisplay(temp);
+                var code = data.current_weather.weathercode;
+                updateDisplay(temp, code);
                 try {
                   localStorage.setItem(cacheKey, temp);
+                  localStorage.setItem(cacheCodeKey, code);
                   localStorage.setItem(cacheTimeKey, Date.now());
                 } catch (e) {
                   /* localStorage might be full or disabled */
@@ -92,9 +113,11 @@
         }
 
         var cachedTemp = null;
+        var cachedCode = null;
         var cachedTime = null;
         try {
           cachedTemp = localStorage.getItem(cacheKey);
+          cachedCode = localStorage.getItem(cacheCodeKey);
           cachedTime = localStorage.getItem(cacheTimeKey);
         } catch (e) {
           /* localStorage disabled */
@@ -102,7 +125,7 @@
 
         var now = Date.now();
         if (cachedTemp && cachedTime && (now - cachedTime < sixHours)) {
-          updateDisplay(cachedTemp);
+          updateDisplay(cachedTemp, cachedCode || 0);
         } else {
           fetchTemperature();
         }

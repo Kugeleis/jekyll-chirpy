@@ -28,14 +28,14 @@
 
         {% if paths.size == 0 or page.layout == 'home' %}
           <!-- index page -->
-          <span><span class="inner-text">{{ site.data.locales[include.lang].tabs.home | capitalize }}</span></span>
+          <span><span class="inner-text"><i class="fas fa-home"></i></span></span>
 
         {% else %}
           {% for item in paths %}
             {% if forloop.first %}
               <span>
                 <a href="{{ '/' | relative_url }}">
-                  {{- site.data.locales[include.lang].tabs.home | capitalize -}}
+                  <i class="fas fa-home"></i>
                 </a>
               </span>
 
@@ -44,23 +44,23 @@
                 {% for category in page.categories %}
                   <span>
                     <a href="{{ site.baseurl }}/categories/{{ category | slugify | url_encode }}/">
-                      {{ category }}
+                      {{ category | capitalize }}
                     </a>
                   </span>
                 {% endfor %}
               {% endif %}
 
               {% if page.collection == 'tabs' %}
-                <span><span class="inner-text">{{ site.data.locales[include.lang].tabs[item] | default: page.title }}</span></span>
+                <span><span class="inner-text">{{ (site.data.locales[include.lang].tabs[item] | default: page.title) | capitalize }}</span></span>
               {% else %}
-                <span><span class="inner-text">{{ page.title }}</span></span>
+                <span><span class="inner-text">{{ page.title | capitalize }}</span></span>
               {% endif %}
 
             {% elsif page.layout == 'category' or page.layout == 'tag' %}
               {% if item == 'categories' or item == 'tags' %}
                 <span>
                   <a href="{{ item | append: '/' | relative_url }}">
-                    {{- site.data.locales[include.lang].tabs[item] | default: item | capitalize -}}
+                    {{- (site.data.locales[include.lang].tabs[item] | default: item) | capitalize -}}
                   </a>
                 </span>
               {% endif %}

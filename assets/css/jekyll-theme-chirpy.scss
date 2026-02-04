@@ -63,9 +63,9 @@ code, pre, kbd, samp, .highlight, .rouge-code, .rouge-gutter {
 
     span {
       white-space: nowrap;
-      max-width: 40%;
       display: flex;
       align-items: center;
+      min-width: 0;
 
       a, .inner-text {
         overflow: hidden;
@@ -77,6 +77,14 @@ code, pre, kbd, samp, .highlight, .rouge-code, .rouge-gutter {
         content: '›';
         padding: 0 0.2rem;
         flex-shrink: 0;
+      }
+
+      &:not(:only-child):last-child {
+        display: none;
+      }
+
+      &:nth-last-child(2)::after {
+        display: none;
       }
     }
 

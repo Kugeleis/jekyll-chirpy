@@ -17,7 +17,7 @@ Heute bin ich eine kleine Strecke in Tokio gefahren. Hier ist der GPX-Track:
   document.addEventListener("DOMContentLoaded", function() {
     var map = L.map('gpx-map');
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);

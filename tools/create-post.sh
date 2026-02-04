@@ -31,11 +31,6 @@ SLUG=$(printf '%s' "$SLUG" | sed 's/-\{2,\}/-/g')
 
 DATE=$(date +%Y-%m-%d)
 
-# Process images
-# Find GitHub asset URLs
-IMAGES=$(printf '%s' "$BODY" | grep -oE 'https://github.com/[^/]+/[^/]+/assets/[0-9a-fA-F-]+(/[0-9a-fA-F-]+)?|https://github.com/user-attachments/assets/[0-9a-fA-F-]+' | sort -u)
-
-# Continue with further processing
 # Create post file with front matter
 mkdir -p "_posts"
 

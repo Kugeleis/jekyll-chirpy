@@ -29,6 +29,22 @@ latest version of the **Chirpy** theme and the [CD][CD] workflow to here, so tha
 
 Check out the [theme's docs](https://github.com/cotes2020/jekyll-theme-chirpy/wiki).
 
+## How to create a post
+
+To create a new blog post via GitHub Issues:
+
+1.  **Open an Issue**: Create a new issue in this repository.
+2.  **Title**: The issue title will be used as the post title.
+3.  **Content**:
+    *   **Tags**: Add a line like `tags: tag1, tag2`.
+    *   **Categories**: Add a line like `categories: cat1, cat2`.
+    *   **GPX Track**: To include an interactive map with a GPX track:
+        1.  Upload your `.gpx` file to the repository (e.g., in `assets/gpx/`).
+        2.  Add a line in the issue body: `gpx: assets/gpx/your-track.gpx`.
+    *   **Body**: The rest of the issue body will be the post content.
+4.  **Label**: Add the `new-post` label to the issue.
+5.  **Automation**: A GitHub Action will create the post and close the issue. If an error occurs (e.g., the GPX file is missing), a comment will be posted on the issue.
+
 ## Contributing
 
 This repository is automatically updated with new releases from the theme repository. If you encounter any issues or want to contribute to its improvement, please visit the [theme repository][chirpy] to provide feedback.

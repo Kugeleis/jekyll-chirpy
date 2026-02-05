@@ -16,8 +16,9 @@ jobs:
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
-        run: bash tools/create-post.sh
-      - name: Comment on issue
+        run: bash tools/create-post.sh 2>error.txt
+      - name: Comment on success
+        if: success()
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -35,4 +36,22 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed'
+            });
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let errorMsg = "An unknown error occurred during post creation.";
+            if (fs.existsSync('error.txt')) {
+              errorMsg = fs.readFileSync('error.txt', 'utf8').trim();
+            }
+            const issue = context.issue;
+            await github.rest.issues.createComment({
+              issue_number: issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **Post creation failed**\n\n${errorMsg}`
             });

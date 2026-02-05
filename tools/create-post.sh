@@ -22,6 +22,18 @@ else
   CATEGORIES=""
 fi
 
+# Extract GPX track
+GPX_LINE=$(printf '%s' "$BODY" | grep -iE '^gpx: ' | head -n 1)
+if [ -n "$GPX_LINE" ]; then
+  GPX_PATH=$(printf '%s' "$GPX_LINE" | sed -E 's/^gpx: //i' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+  if [ ! -f "$GPX_PATH" ]; then
+    printf 'Error: GPX file "%s" not found in the repository.\n' "$GPX_PATH" >&2
+    exit 1
+  fi
+  # Replace the line with the Jekyll include
+  BODY=$(printf '%s' "$BODY" | sed "s|^$GPX_LINE|{% include gpx-map.html track=\"$GPX_PATH\" %}|")
+fi
+
 # Create filename-friendly slug
 # Normalize German Umlaute
 SLUG=$(printf '%s' "$TITLE" | sed 's/ä/ae/g; s/ö/oe/g; s/ü/ue/g; s/Ä/ae/g; s/Ö/oe/g; s/Ü/ue/g; s/ß/ss/g')

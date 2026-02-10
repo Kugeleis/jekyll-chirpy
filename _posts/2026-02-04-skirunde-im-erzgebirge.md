@@ -1,6 +1,8 @@
 ---
 title: "Skirunde im Erzgebirge"
 date: 2026-02-04 15:25:07 +0000
+categories: [Sport]
+tags: [winter, ski, ]
 ---
 
 Heute war ich Ski fahren. Das war schön und nebelig. 
